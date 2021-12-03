@@ -89,8 +89,12 @@ class MyMessage extends StatelessWidget{
           SizedBox(width:8),
           //投稿
           GestureDetector(
-            onLongPress: ()=> onPressed(),
+            onLongPress: (){
+              print('onLongPress');
+              onPressed();
+            },
             child: Container(
+              padding: EdgeInsets.all(4),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 color: Colors.lightGreenAccent
@@ -122,6 +126,7 @@ class OtherMessage extends StatelessWidget{
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Container(
+            padding: EdgeInsets.all(4),
             constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width*0.6),
             decoration: BoxDecoration(color: Colors.white,borderRadius: BorderRadius.circular(10)),
             child: Text(message),

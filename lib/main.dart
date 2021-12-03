@@ -85,6 +85,8 @@ class HomePage extends StatelessWidget{
                   Header('Discussion'),
                   GuestBook(
                     guestBookMessages: appState.guestBookMessages,
+                    userId:appState.currentUserId,
+                    deleteMessage:appState.deleteMessage,
                     addMessage:(message) => appState.addMessageToGuestBook(message)
                   )
                 ]
@@ -106,6 +108,10 @@ enum Attending{
 class ApplicationState extends ChangeNotifier{
   LoginState _loginState = LoginState.loggedOut;
   LoginState get loginState => _loginState;
+
+
+  String _currentUserId = '';
+  String get currentUserId => _currentUserId;
 
   String? _email;
   String? get email => _email;
@@ -147,11 +153,18 @@ class ApplicationState extends ChangeNotifier{
 
     FirebaseAuth.instance.userChanges().listen((user) {
       if(user != null){
+        _currentUserId = user.uid;
         _loginState = LoginState.loggedIn;
         _subscription = FirebaseFirestore.instance.collection('guestbook').orderBy('timestamp',descending: true).snapshots().listen((snapshot) {
           _guestBookMessages = [];
           snapshot.docs.forEach((document) {
-            _guestBookMessages.add(GuestBookMessage(user: document.data()['name'],message:document.data()['text']));
+            _guestBookMessages.add(GuestBookMessage(
+                messageId:document.id,
+                user: document.data()['name'],
+                message:document.data()['text'],
+                userId:document.data()['userId'],
+                timestamp:document.data()['timestamp']
+            ));
           });
           notifyListeners();
         });
@@ -166,6 +179,7 @@ class ApplicationState extends ChangeNotifier{
           }
         });
       }else{
+        _currentUserId = '';
         _loginState = LoginState.loggedOut;
         _guestBookMessages = [];
         _subscription?.cancel();
@@ -175,6 +189,16 @@ class ApplicationState extends ChangeNotifier{
 
     });
 
+  }
+
+  void deleteMessage(String messageId) async {
+    DocumentReference ref = FirebaseFirestore.instance.collection('guestbook').doc(messageId);
+    DocumentSnapshot data = await ref.get();
+    String user = (data.data() as Map<String,dynamic>)['userId'];
+    if(user == FirebaseAuth.instance.currentUser!.uid){
+      await ref.delete();
+      notifyListeners();
+    }
   }
 
   Future<DocumentReference> addMessageToGuestBook(String message){
@@ -240,9 +264,12 @@ class ApplicationState extends ChangeNotifier{
 }
 
 class GuestBook extends StatefulWidget {
-  const GuestBook({Key? key,required this.addMessage,required this.guestBookMessages}) : super(key: key);
+  const GuestBook({Key? key,required this.addMessage,required this.guestBookMessages,required this.userId,required this.deleteMessage}) : super(key: key);
   final Future<void> Function(String message) addMessage;
   final List<GuestBookMessage> guestBookMessages;
+
+  final String userId;
+  final void Function(String messageId) deleteMessage;
 
   @override
   _GuestBookState createState() => _GuestBookState();
@@ -299,18 +326,32 @@ class _GuestBookState extends State<GuestBook> {
         ),
       ),
       SizedBox(width:8),
-      for(var message in widget.guestBookMessages) Paragraph('${message.user}:${message.message}'),
+      //TODO  ここから変更
+        for(var message in widget.guestBookMessages) LineLikeMessage(userId: widget.userId, message: message, deleteMessage: ()=>widget.deleteMessage(message.messageId)),
+      // for(var message in widget.guestBookMessages) Paragraph('${message.user}:${message.message}'),
       SizedBox(width:8)
       ]
     );
   }
 }
 
+
+
 //GusetBookのデータを表すクラス
 class GuestBookMessage{
   final String user;
   final String message;
-  GuestBookMessage({required this.user,required this.message});
+  final int timestamp;
+  final String userId;
+  final String messageId;
+
+  GuestBookMessage({
+    required this.user,
+    required this.message,
+    required this.timestamp,
+    required this.userId,
+    required this.messageId
+  });
 }
 
 class YesNoSelection extends StatelessWidget{
@@ -378,4 +419,96 @@ class YesNoSelection extends StatelessWidget{
     }
   }
 }
+
+class LineLikeMessage extends StatelessWidget{
+  final String userId;
+  final GuestBookMessage message;
+  final void Function() deleteMessage;
+
+  LineLikeMessage({required this.userId,required this.message,required this.deleteMessage});
+
+  void showConfirmDialog(BuildContext context)async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title:Text('メッセージの削除'),
+        content:Text('このメッセージを削除しますか？'),
+        actions: [
+          StyledButton(
+            child:Text('YES'),
+            onPressed: (){
+              deleteMessage();
+              Navigator.of(context).pop();
+            },
+          ),
+          TextButton(
+            child: Text('NO'),
+            onPressed: ()=> Navigator.of(context).pop(),
+          )
+        ],
+      )
+    );
+  }
+
+  Widget build(context){
+    if(userId == message.userId) return MyMessage(message:message.message,timestamp:message.timestamp,onPressed:()=>showConfirmDialog(context),);
+    else return OtherMessage(message: message.message, username: message.user, timestamp: message.timestamp);
+  }
+}
+
+/*
+class LineLikeMessage extends StatelessWidget{
+  final bool isMine;
+  //多分使わない　final String messageId;
+  final String message;
+  final int timestamp;
+  final String username;
+  final void Function() deleteMessage;
+
+
+  LineLikeMessage({
+      required this.isMine,
+      required this.message,
+      required this.timestamp,
+      required this.username,
+      required this.deleteMessage
+  });
+
+  void showConfirmDialog(BuildContext context) async {
+    await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title:Text(
+              'メッセージの削除',
+              style:TextStyle(fontSize:24)
+          ),
+          content: Text(
+            'このメッセージを削除しますか？',
+            style:TextStyle(fontSize:18)
+          ),
+          actions: [
+            StyledButton(
+              child: Text('YES'),
+              onPressed: (){
+                deleteMessage();
+                Navigator.of(context).pop();
+                },
+            ),
+            TextButton(
+              child: Text('NO'),
+              onPressed:()=> Navigator.of(context).pop(),
+            )
+          ],
+        )
+    );
+
+
+  }
+  Widget build(context){
+    if(isMine) return MyMessage(message: message, timestamp: timestamp, onPressed: ()=>showConfirmDialog(context));
+    else return OtherMessage(message:message,timestamp:timestamp,username:username);
+  }
+}
+ */
+
 
