@@ -427,7 +427,7 @@ class LineLikeMessage extends StatelessWidget{
 
   LineLikeMessage({required this.userId,required this.message,required this.deleteMessage});
 
-  void showConfirmDialog(BuildContext context)async {
+  Future<void> showConfirmDialog(BuildContext context)async {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -451,7 +451,7 @@ class LineLikeMessage extends StatelessWidget{
   }
 
   Widget build(context){
-    if(userId == message.userId) return MyMessage(message:message.message,timestamp:message.timestamp,onPressed:()=>showConfirmDialog(context),);
+    if(userId == message.userId) return MyMessageWidget(message:message.message,timestamp:message.timestamp,onPressed:()=>showConfirmDialog(context),);
     else return OtherMessage(message: message.message, username: message.user, timestamp: message.timestamp);
   }
 }

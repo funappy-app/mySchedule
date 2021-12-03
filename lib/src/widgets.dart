@@ -67,12 +67,31 @@ class StyledButton extends StatelessWidget{
   }
 }
 
-class MyMessage extends StatelessWidget{
+
+
+
+class MyMessageWidget extends StatefulWidget{
+   MyMessageWidget({
+    required this.message,
+    required this.timestamp,
+    required this.onPressed
+  });
   final String message;
   final int timestamp;
   final DateFormat _formatter = DateFormat('MM/dd HH:mm');
-  final void Function() onPressed;
-  MyMessage({required this.message,required this.timestamp,required this.onPressed});
+  final Future<void> Function() onPressed;
+  @override
+  _MyMessage createState() => _MyMessage();
+}
+
+class _MyMessage extends State<MyMessageWidget>{
+  Color _color = Colors.lightGreenAccent;
+
+  void onLongPressed() async {
+    await widget.onPressed();
+    setState(()=> _color = Colors.lightGreenAccent);
+  }
+
 
   Widget build(context){
     return Container(
@@ -83,24 +102,25 @@ class MyMessage extends StatelessWidget{
         children: [
           //投稿日時
           Text(
-              _formatter.format(DateTime.fromMillisecondsSinceEpoch(timestamp)),
+              widget._formatter.format(DateTime.fromMillisecondsSinceEpoch(widget.timestamp)),
               style:TextStyle(color: Colors.grey,fontSize: 8)
           ),
           SizedBox(width:8),
           //投稿
           GestureDetector(
             onLongPress: (){
+              setState(()=> _color = Colors.blue);
               print('onLongPress');
-              onPressed();
+              onLongPressed();
             },
             child: Container(
               padding: EdgeInsets.all(4),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                color: Colors.lightGreenAccent
+                color: _color
               ),
               constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width*0.6),
-              child: Text(message),
+              child: Text(widget.message),
             ),
           )
 
@@ -110,31 +130,37 @@ class MyMessage extends StatelessWidget{
   }
 }
 
-class OtherMessage extends StatelessWidget{
+class OtherMessage extends StatelessWidget {
   final String message;
   final String username;
   final int timestamp;
   final DateFormat _formatter = DateFormat('MM/dd HH:mm');
-  
-  OtherMessage({required this.message,required this.username,required this.timestamp});
-  
-  Widget build(context){
+
+  OtherMessage(
+      {required this.message, required this.username, required this.timestamp});
+
+  Widget build(context) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical:8,horizontal:16),
-      child:Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Container(
-            padding: EdgeInsets.all(4),
-            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width*0.6),
-            decoration: BoxDecoration(color: Colors.white,borderRadius: BorderRadius.circular(10)),
-            child: Text(message),
-          ),
-          SizedBox(width:8),
-          Text(_formatter.format(DateTime.fromMillisecondsSinceEpoch(timestamp)))
-        ],
-      )
+        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Container(
+              padding: EdgeInsets.all(4),
+              constraints: BoxConstraints(maxWidth: MediaQuery
+                  .of(context)
+                  .size
+                  .width * 0.6),
+              decoration: BoxDecoration(
+                  color: Colors.white, borderRadius: BorderRadius.circular(10)),
+              child: Text(message),
+            ),
+            SizedBox(width: 8),
+            Text(_formatter.format(
+                DateTime.fromMillisecondsSinceEpoch(timestamp)))
+          ],
+        )
     );
   }
 }
